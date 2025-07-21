@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Love</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #ffe6f0;
+      margin: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      text-align: center;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      color: #d63384;
+      margin-top: 20px;
+      font-size: 2.5em;
+    }
+
+    .screen {
+      display: none;
+      padding: 20px;
+    }
+
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 70vh;
+      border: 2px dashed #ff99c8;
+      margin: 10px auto;
+      overflow: hidden;
+      background-color: #fff0f6;
+    }
+
+    .heart, .broken-heart {
+      position: absolute;
+      font-size: 24px;
+      cursor: pointer;
+      animation: floatUp 3s linear forwards;
+      user-select: none;
+    }
+
+    .heart {
+      color: #ff4d88;
+    }
+
+    .broken-heart {
+      color: #999;
+    }
+
+    @keyframes floatUp {
+      0% { transform: translateY(100%); opacity: 1; }
+      100% { transform: translateY(-150%); opacity: 0; }
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1.1em;
+      background: #ff66b2;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+     -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    button:hover {
+      background: #e60073;
+    }
+
+    #score, #timer {
+      font-size: 20px;
+      color: #660033;
+      margin: 5px;
+    }
+
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+    }
+
+    td, th {
+      border: 1px solid #ff99c8;
+      padding: 6px 12px;
+    }
+
+    .gender-select button {
+      margin: 10px;
+      width: 45%;
+      height: 80px;
+      font-size: 1.5em;
+    }
+
+    #genderScreen {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    #resultScreen h2 {
+      font-size: 26px;
+      color: #cc0066;
+    }
+
+    #loveMessage {
+      font-size: 20px;
+      color: #99004d;
+      margin-top: 10px;
+    }
+
+    #heartTotal {
+      font-size: 22px;
+      color: #ff3399;
+    }
+
+    canvas {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      top: 0;
+      left: 0;
+    }
+
+    @media screen and (max-width: 600px) {
+      .gender-select button {
+        width: 90%;
+        margin-bottom: 10px;
+        height: 70px;
+      }
+
+      #game {
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- GENDER SELECTION -->
+<div class="screen" id="genderScreen" style="display:flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+  <h1>💖 Mini Love 💖</h1>
+  <h2 style="margin-top: 10px;">Who are you?</h2>
+  <div class="gender-select" style="width: 100%;">
+    <button style="touch-action: manipulation;" onclick="selectGender('male')">Male 👦</button>
+    <button style="touch-action: manipulation;" onclick="selectGender('female')">Female 👧</button>
+  </div>
+</div>
+
+  <!-- INSTRUCTIONS -->
+  <div class="screen" id="instructionScreen">
+    <h2>How to Play 💘</h2>
+    <p>Click as many ❤️ hearts as you can in 30 seconds!</p>
+    <p>But beware of 💔 broken hearts — they’ll cost you 1 point!</p>
+
+    <h3>Love Scale 💞</h3>
+    <table>
+      <tr><th>Hearts</th><th>Your Love Level</th></tr>
+      <tr><td>0 - 5</td><td>Needs Work 😅</td></tr>
+      <tr><td>6 - 10</td><td>Getting There 💌</td></tr>
+      <tr><td>11 - 15</td><td>Sweetheart 💕</td></tr>
+      <tr><td>16 - 29</td><td>Hopeless Romantic 🌹</td></tr>
+      <tr><td>30+</td><td>TRUE LOVE 💍💖</td></tr>
+    </table>
+    <br>
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="screen" id="gameScreen">
+    <div id="score">Score: 0</div>
+    <div id="timer">Time Left: 30</div>
+    <div id="game"></div>
+  </div>
+
+  <!-- RESULT SCREEN -->
+  <div class="screen" id="resultScreen">
+    <h2>💌 Your Love Report 💌</h2>
+    <div id="heartTotal"></div>
+    <div id="loveMessage"></div>
+    <button onclick="location.reload()">Play Again</button>
+  </div>
+
+  <canvas id="confettiCanvas"></canvas>
+
+  <script>
+    const game = document.getElementById('game');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const genderScreen = document.getElementById('genderScreen');
+    const instructionScreen = document.getElementById('instructionScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const resultScreen = document.getElementById('resultScreen');
+    const heartTotal = document.getElementById('heartTotal');
+    const loveMessage = document.getElementById('loveMessage');
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const ctx = confettiCanvas.getContext("2d");
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameInterval, timerInterval;
+    let playerGender = '';
+    let partnerLabel = '';
+    let confettiParticles = [];
+
+    function resizeCanvas() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function selectGender(gender) {
+      playerGender = gender;
+      partnerLabel = gender === 'male' ? 'your Queen 👸' : 'your King 🤴';
+      genderScreen.style.display = 'none';
+      instructionScreen.style.display = 'block';
+    }
+
+    function randomPosition(max) {
+      return Math.floor(Math.random() * max);
+    }
+
+    function createHeart() {
+      const heart = document.createElement('div');
+      const isBroken = Math.random() < 0.2;
+      heart.classList.add(isBroken ? 'broken-heart' : 'heart');
+      heart.innerHTML = isBroken ? '💔' : '❤️';
+      heart.style.left = randomPosition(game.offsetWidth - 30) + 'px';
+      heart.style.top = randomPosition(game.offsetHeight - 30) + 'px';
+      
+      heart.addEventListener('click', () => {
+        score += isBroken ? -1 : 1;
+        if (score < 0) score = 0;
+        scoreDisplay.textContent = 'Score: ' + score;
+        heart.remove();
+      });
+
+      game.appendChild(heart);
+      setTimeout(() => heart.remove(), 3000);
+    }
+
+    function startGame() {
+      instructionScreen.style.display = 'none';
+      gameScreen.style.display = 'block';
+      score = 0;
+      timeLeft = 30;
+      scoreDisplay.textContent = 'Score: 0';
+      timerDisplay.textContent = 'Time Left: 30';
+      game.innerHTML = '';
+
+      gameInterval = setInterval(createHeart, 600);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = 'Time Left: ' + timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(gameInterval);
+          clearInterval(timerInterval);
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function endGame() {
+      gameScreen.style.display = 'none';
+      resultScreen.style.display = 'block';
+
+      let message = '';
+      if (score <= 5) message = 'Needs Work 😅';
+      else if (score <= 10) message = 'Getting There 💌';
+      else if (score <= 15) message = 'Sweetheart 💕';
+      else if (score <= 29) message = 'Hopeless Romantic 🌹';
+      else message = 'TRUE LOVE 💍💖';
+
+      heartTotal.textContent = `You caught ${score} hearts!`;
+      loveMessage.textContent = `Your love for ${partnerLabel} is: ${message}`;
+
+      if (score >= 15) triggerConfetti();
+    }
+
+    // Confetti burst
+    function triggerConfetti() {
+      for (let i = 0; i < 150; i++) {
+        confettiParticles.push({
+          x: Math.random() * confettiCanvas.width,
+          y: Math.random() * confettiCanvas.height - 50,
+          r: Math.random() * 6 + 4,
+          d: Math.random() * 10 + 2,
+          color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+          tilt: Math.random() * 10 - 5
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        for (let i = 0; i < confettiParticles.length; i++) {
+          const p = confettiParticles[i];
+          ctx.beginPath();
+          ctx.fillStyle = p.color;
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+          ctx.fill();
+          p.y += p.d;
+          p.x += Math.sin(p.tilt);
+          if (p.y > confettiCanvas.height) p.y = -10;
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+  </script>
+</body>
+</html>
