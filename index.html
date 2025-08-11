@@ -1,60 +1,420 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Mini Love</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini Love — Heart Clicker</title>
+  <style>
+    :root{
+      --bg:#0f1226; --card:#161a36; --ink:#e9ecff; --ink-dim:#aab0ff; --accent:#ff5a8a; --accent-2:#ff9fbf;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--ink); background: radial-gradient(1200px 800px at 20% 0%,#1a1f49,transparent),
+               radial-gradient(1000px 900px at 80% 100%,#1a1f49,transparent), var(--bg);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .wrap{width:min(1100px,96vw);} 
+
+    .hud{
+      display:flex; align-items:center; justify-content:space-between; gap:1rem;
+      background:linear-gradient(180deg, #1c2045, #151938);
+      border:1px solid rgba(255,255,255,.06); border-radius:18px; padding:.8rem 1rem; box-shadow:0 20px 60px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+    }
+    .title{font-weight:800; letter-spacing:.2px}
+    .pill{display:inline-flex; align-items:center; gap:.5rem; padding:.45rem .75rem; border-radius:9999px; background:#0f1330; border:1px solid rgba(255,255,255,.06)}
+    .stat{font-weight:700}
+    .btn{cursor:pointer; border:0; background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:white; font-weight:800; padding:.65rem 1rem; border-radius:12px; box-shadow:0 12px 30px rgba(255,90,138,.35);} 
+    .ghost{background:transparent; border:1px solid rgba(255,255,255,.15); color:var(--ink)}
+    .small{font-size:.9rem}
+
+    .tog{ display:flex; align-items:center; gap:.35rem; font-size:.9rem; color:var(--ink-dim) }
+    .tog input{accent-color:var(--accent)}
+
+    .game{
+      margin-top:14px; height:min(70vh,620px); min-height:500px; position:relative; overflow:hidden;
+      border-radius:22px; background: radial-gradient(900px 600px at 70% 30%, #1b204a 0%, #121531 60%, #0f1226 100%);
+      border:1px solid rgba(255,255,255,.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,.02), 0 30px 100px rgba(0,0,0,.5);
+    }
+    .game .hint{position:absolute; inset:auto 0 0 0; text-align:center; padding:10px; font-size:.9rem; color:var(--ink-dim)}
+
+    .heart, .broken-heart{
+      position:absolute; font-size:40px; user-select:none; cursor:pointer; filter: drop-shadow(0 10px 10px rgba(0,0,0,.25));
+      transition: transform .06s ease;
+    }
+    .heart:active, .broken-heart:active{ transform: scale(.9) }
+
+    /* pop animation */
+    @keyframes pop { 0%{ transform: scale(.4) translateY(20px); opacity:.0 } 80%{opacity:1} 100%{ transform: scale(1) translateY(0); opacity:1 } }
+    .pop{ animation: pop .16s ease-out }
+
+    /* particle canvas */
+    #fx{ position:absolute; inset:0; pointer-events:none }
+
+    /* Overlay + tier themes */
+    .overlay{ position:absolute; inset:0; display:grid; place-items:center; background:linear-gradient(180deg, rgba(8,9,20,.5), rgba(12,13,26,.7)); backdrop-filter: blur(2px);} 
+    .overlay .card{ background:var(--card); border:1px solid rgba(255,255,255,.08); padding:28px; border-radius:16px; box-shadow:0 24px 80px rgba(0,0,0,.5); max-width:640px }
+    .overlay h2{margin:0 0 .3rem 0}
+    .muted{color:var(--ink-dim)}
+
+    /* Tiered overlay backgrounds */
+    .overlay.tier-needs{ background:linear-gradient(180deg, rgba(255,122,122,.28), rgba(12,13,26,.8)); }
+    .overlay.tier-getting{ background:linear-gradient(180deg, rgba(255,165,196,.28), rgba(12,13,26,.8)); }
+    .overlay.tier-sweet{ background:linear-gradient(180deg, rgba(255,121,198,.28), rgba(12,13,26,.8)); }
+    .overlay.tier-hopeless{ background:linear-gradient(180deg, rgba(255,104,150,.28), rgba(12,13,26,.8)); }
+    .overlay.tier-true{ background:linear-gradient(180deg, rgba(255,230,120,.28), rgba(12,13,26,.8)); }
+
+    /* Corner 3D heart preview */
+    #threePreview{ position:absolute; right:10px; top:10px; width:160px; height:120px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.08); background:#0a0c1b; }
+
+    /* Gender choices */
+    .choices{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem }
+    .choice{ padding:.5rem .85rem; border-radius:999px; border:1px solid rgba(255,255,255,.12); cursor:pointer; }
+    .choice.active{ background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#fff; border-color:transparent }
+
+    @media (max-width:640px){ .hud{flex-wrap:wrap} #threePreview{display:none} }
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="hud">
+      <div class="title">❤️ Mini Love — Click the hearts, dodge the broken ones</div>
+      <div class="pill">Score: <span id="score" class="stat">0</span></div>
+      <div class="pill">Time: <span id="time" class="stat">30</span>s</div>
+      <div class="tog"><label><input type="checkbox" id="hard" /> Hard mode (more 💔)</label></div>
+      <div class="tog"><label><input type="checkbox" id="threeToggle" /> 3D preview</label></div>
+      <div>
+        <button id="start" class="btn">Start</button>
+        <button id="reset" class="btn ghost small">Reset</button>
+      </div>
+    </div>
 
-  <!-- GENDER SELECTION -->
-<div class="screen" id="genderScreen" style="display:flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
-  <h1>💖 Mini Love 💖</h1>
-  <h2 style="margin-top: 10px;">Who are you?</h2>
-  <div class="gender-select" style="width: 100%;">
-    <button style="touch-action: manipulation;" onclick="selectGender('male')">Male 👦</button>
-    <button style="touch-action: manipulation;" onclick="selectGender('female')">Female 👧</button>
-  </div>
-</div>
-
-  <!-- INSTRUCTIONS -->
-  <div class="screen" id="instructionScreen">
-    <h2>How to Play 💘</h2>
-    <p>Click as many ❤️ hearts as you can in 30 seconds!</p>
-    <p>But beware of 💔 broken hearts — they’ll cost you 1 point!</p>
-
-    <h3>Love Scale 💞</h3>
-    <table>
-      <tr><th>Hearts</th><th>Your Love Level</th></tr>
-      <tr><td>0 - 5</td><td>Needs Work 😅</td></tr>
-      <tr><td>6 - 10</td><td>Getting There 💌</td></tr>
-      <tr><td>11 - 15</td><td>Sweetheart 💕</td></tr>
-      <tr><td>16 - 29</td><td>Hopeless Romantic 🌹</td></tr>
-      <tr><td>30+</td><td>TRUE LOVE 💍💖</td></tr>
-    </table>
-    <br>
-    <button onclick="startGame()">Start Game</button>
+    <div class="game" id="game">
+      <canvas id="fx"></canvas>
+      <div id="threePreview" hidden></div>
+      <div class="hint">Tap/click hearts before they fade. Broken hearts deduct a point.</div>
+      <div class="overlay" id="overlay">
+        <!-- Filled dynamically (onboarding + instructions + results) -->
+      </div>
+    </div>
   </div>
 
-  <!-- GAME SCREEN -->
-  <div class="screen" id="gameScreen">
-    <div id="score">Score: 0</div>
-    <div id="timer">Time Left: 30</div>
-    <div id="game"></div>
-  </div>
+  <script type="module">
+    // =====================
+    // Config & DOM
+    // =====================
+    const DURATION = 30;         // seconds
+    const SPAWN_MS = 600;        // spawn interval
+    const HEART_TTL_MS = 2200;   // heart lifetime
+    const BROKEN_CHANCE = 0.2;   // base chance of 💔
 
-  <!-- RESULT SCREEN -->
-  <div class="screen" id="resultScreen">
-    <h2>💌 Your Love Report 💌</h2>
-    <div id="heartTotal"></div>
-    <div id="loveMessage"></div>
-    <button onclick="location.reload()">Play Again</button>
-  </div>
+    const game = document.getElementById('game');
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const startBtn = document.getElementById('start');
+    const resetBtn = document.getElementById('reset');
+    const overlay = document.getElementById('overlay');
+    const hardToggle = document.getElementById('hard');
+    const threeToggle = document.getElementById('threeToggle');
+    const fxCanvas = document.getElementById('fx');
+    const threePreview = document.getElementById('threePreview');
 
-  <canvas id="confettiCanvas"></canvas>
+    let playing = false, score = 0, tLeft = DURATION, spawnTimer = null, tickTimer = null;
+    const state = { gender: null, step: 0 };
 
-  <script src="script.js"></script>
+    // Resize particle canvas to game
+    const resizeFx = () => { fxCanvas.width = game.clientWidth; fxCanvas.height = game.clientHeight; };
+    new ResizeObserver(resizeFx).observe(game);
+
+    // Utility
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const randomXY = (w=40, h=40) => { const x = rand(8, game.clientWidth - w - 8); const y = rand(40, game.clientHeight - h - 40); return {x,y}; };
+
+    // Particles
+    const ctx = fxCanvas.getContext('2d');
+    const pops = [];
+    function pop(x,y,good=true){
+      const n = good ? 10 : 6;
+      for(let i=0;i<n;i++) pops.push({x,y, vx:rand(-2,2), vy:rand(-3,-1), g:.08, life:rand(16,28), r:rand(1,2.4)});
+    }
+    function fxLoop(){
+      ctx.clearRect(0,0,fxCanvas.width, fxCanvas.height);
+      for(let i=pops.length-1;i>=0;i--){
+        const p = pops[i];
+        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.life -= 1;
+        if(p.life<=0){ pops.splice(i,1); continue; }
+        ctx.globalAlpha = Math.max(0, p.life/28);
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = '#ff6499'; ctx.fill();
+      }
+      requestAnimationFrame(fxLoop);
+    }
+    fxLoop();
+
+    // -------- Helpers (testable) --------
+    function getSalutationSegment(g){
+      if(!g || g==='skip') return '';
+      const word = g==='male' ? 'sir' : (g==='female' ? 'ma\u2019am' : 'friend');
+      return ', ' + word;
+    }
+    function getTier(score){
+      if (score <= 5) return { message:'Needs Work 😅', cls:'tier-needs' };
+      if (score <= 10) return { message:'Getting There 💌', cls:'tier-getting' };
+      if (score <= 15) return { message:'Sweetheart 💕', cls:'tier-sweet' };
+      if (score <= 29) return { message:'Hopeless Romantic 🌹', cls:'tier-hopeless' };
+      return { message:'TRUE LOVE 💍💖', cls:'tier-true' };
+    }
+
+    // Onboarding (Gender -> Instructions)
+    function showOnboarding(step=0){
+      state.step = step;
+      overlay.className = 'overlay';
+      if(step === 0){
+        const g = state.gender;
+        overlay.innerHTML = `
+          <div class="card">
+            <h2>Who are you?</h2>
+            <p class="muted">Pick a vibe to personalize the game. You can skip.</p>
+            <div class="choices">
+              <button class="choice ${g==='female'?'active':''}" data-g="female">Female</button>
+              <button class="choice ${g==='male'?'active':''}" data-g="male">Male</button>
+              <button class="choice ${g==='nb'?'active':''}" data-g="nb">Non‑binary</button>
+              <button class="choice ${g==='skip'?'active':''}" data-g="skip">Skip</button>
+            </div>
+            <div style="display:flex; gap:.5rem; flex-wrap:wrap">
+              <button class="btn" id="next">Next</button>
+            </div>
+          </div>`;
+        overlay.style.display='grid';
+        overlay.querySelectorAll('.choice').forEach(b=>{
+          b.onclick = ()=>{
+            state.gender = b.dataset.g; 
+            overlay.querySelectorAll('.choice').forEach(x=>x.classList.remove('active'));
+            b.classList.add('active');
+          };
+        });
+        overlay.querySelector('#next').onclick = ()=> showOnboarding(1);
+      }
+      else if(step === 1){
+        overlay.innerHTML = `
+          <div class="card">
+            <h2>How to play</h2>
+            <p class="muted">You have <strong>30 seconds</strong>. Click ❤️ to score. Avoid 💔 or you lose a point (never below zero). Try <em>Hard mode</em> if you want more broken hearts.</p>
+            <p class="muted">Toggle <em>3D preview</em> to see a small spinning 3D heart. The game itself remains lightweight so it runs smoothly on phones.</p>
+            <div style="display:flex; gap:.5rem; flex-wrap:wrap">
+              <button id="playBtn" class="btn">Play</button>
+              <button id="backBtn" class="btn ghost">Back</button>
+            </div>
+          </div>`;
+        overlay.style.display='grid';
+        overlay.querySelector('#playBtn').onclick = startGame;
+        overlay.querySelector('#backBtn').onclick = ()=> showOnboarding(0);
+      }
+    }
+
+    // Heart Spawner
+    function createHeart(){
+      const isBroken = Math.random() < (BROKEN_CHANCE + (hardToggle.checked? .18 : 0));
+      const el = document.createElement('div');
+      el.className = isBroken ? 'broken-heart pop' : 'heart pop';
+      el.textContent = isBroken ? '💔' : '❤️';
+      const {x,y} = randomXY(40,40);
+      el.style.left = `${x}px`; el.style.top = `${y}px`;
+
+      let removed = false;
+      const remove = () => { if(removed) return; removed=true; el.remove(); };
+
+      el.addEventListener('click', ()=>{
+        if(!playing) return;
+        if(isBroken){ score = Math.max(0, score - 1); pop(x+12,y+12,false); }
+        else { score += 1; pop(x+12,y+12,true); }
+        scoreEl.textContent = score;
+        remove();
+      });
+
+      game.appendChild(el);
+      setTimeout(remove, HEART_TTL_MS);
+    }
+
+    function startGame(){
+      playing = true; score = 0; tLeft = DURATION; scoreEl.textContent = score; timeEl.textContent = tLeft;
+      overlay.style.display = 'none';
+      clearInterval(spawnTimer); clearInterval(tickTimer);
+      spawnTimer = setInterval(createHeart, SPAWN_MS);
+      tickTimer = setInterval(()=>{
+        tLeft -= 1; timeEl.textContent = tLeft;
+        if(tLeft === 10){ clearInterval(spawnTimer); spawnTimer = setInterval(createHeart, Math.max(280, SPAWN_MS-200)); }
+        if(tLeft <= 0){ endGame(); }
+      }, 1000);
+    }
+
+    function endGame(){
+      playing = false; clearInterval(spawnTimer); clearInterval(tickTimer);
+      for(let i=0;i<32;i++) pops.push({x:game.clientWidth/2, y:game.clientHeight/2, vx:rand(-3,3), vy:rand(-4,-1), g:.06, life:rand(18,34), r:rand(1.2,2.8)});
+
+      // Score-tiered message + overlay theme
+      const {message, cls} = getTier(score);
+      overlay.className = `overlay ${cls}`;
+      overlay.innerHTML = `
+        <div class="card">
+          <h2>Your score: ${score}</h2>
+          <p style="font-size:1.1rem; margin:.25rem 0 .75rem 0"><strong>${message}</strong></p>
+          <p class="muted">Nice run${getSalutationSegment(state.gender)}! Flip <em>Hard mode</em> for spicier odds, or try again.</p>
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap">
+            <button class="btn" id="again">Play again</button>
+            <button class="btn ghost" id="home">Main menu</button>
+          </div>
+        </div>`;
+      overlay.style.display = 'grid';
+      overlay.querySelector('#again').onclick = ()=>{ startGame(); };
+      overlay.querySelector('#home').onclick  = ()=>{ showOnboarding(0); };
+    }
+
+    function resetGame(){
+      [...game.querySelectorAll('.heart,.broken-heart')].forEach(n=>n.remove());
+      score = 0; scoreEl.textContent = 0; tLeft = DURATION; timeEl.textContent = DURATION;
+      clearInterval(spawnTimer); clearInterval(tickTimer); playing=false;
+      showOnboarding(0);
+    }
+
+    startBtn.addEventListener('click', ()=>{ if(!playing) startGame(); });
+    resetBtn.addEventListener('click', resetGame);
+
+    // Tiny 3D Heart Preview (Three.js)
+    let three = {renderer:null, scene:null, camera:null, mesh:null, raf:0};
+    async function initThree(){
+      if(three.renderer) return; // already
+      // Use ?module so the CDN rewrites bare specifiers inside examples
+      const [Three, Orbit] = await Promise.all([
+        import('https://unpkg.com/three@0.161.0?module'),
+        import('https://unpkg.com/three@0.161.0/examples/jsm/controls/OrbitControls.js?module')
+      ]);
+      const { WebGLRenderer, Scene, PerspectiveCamera, MeshPhongMaterial, Mesh, AmbientLight, DirectionalLight, ExtrudeGeometry, Shape } = Three;
+      const { OrbitControls } = Orbit;
+
+      const heartPath = new Shape();
+      heartPath.moveTo(0, 0.35);
+      heartPath.bezierCurveTo(0, 0.55, -0.25, 0.7, -0.5, 0.7);
+      heartPath.bezierCurveTo(-0.9, 0.7, -0.95, 0.25, -0.95, 0.2);
+      heartPath.bezierCurveTo(-0.95, -0.1, -0.65, -0.2, -0.5, -0.35);
+      heartPath.bezierCurveTo(-0.35, -0.5, 0, -0.75, 0, -0.9);
+      heartPath.bezierCurveTo(0, -0.75, 0.35, -0.5, 0.5, -0.35);
+      heartPath.bezierCurveTo(0.65, -0.2, 0.95, -0.1, 0.95, 0.2);
+      heartPath.bezierCurveTo(0.95, 0.25, 0.9, 0.7, 0.5, 0.7);
+      heartPath.bezierCurveTo(0.25, 0.7, 0, 0.55, 0, 0.35);
+
+      const geom = new ExtrudeGeometry(heartPath, { depth: 0.28, bevelEnabled:true, bevelSize:0.05, bevelThickness:0.06, bevelSegments:3 });
+      const mat = new MeshPhongMaterial({ color: 0xff4d88, shininess: 80, specular: 0xdddddd });
+      const mesh = new Mesh(geom, mat);
+      mesh.rotation.x = Math.PI * 0.2; mesh.rotation.y = Math.PI * -0.25;
+
+      const scene = new Scene(); scene.add(mesh);
+      const amb = new AmbientLight(0xffffff, .9); scene.add(amb);
+      const dir = new DirectionalLight(0xffffff, .75); dir.position.set(2,2,3); scene.add(dir);
+
+      const camera = new PerspectiveCamera(50, threePreview.clientWidth/threePreview.clientHeight, .1, 100);
+      camera.position.set(0,0,2.4);
+
+      const renderer = new WebGLRenderer({ antialias:true, alpha:true });
+      renderer.setSize(threePreview.clientWidth, threePreview.clientHeight);
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+      threePreview.innerHTML = ''; threePreview.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement); controls.enableZoom=false; controls.enablePan=false;
+
+      three = {renderer, scene, camera, mesh};
+      const onResize = ()=>{
+        if(!three.renderer) return;
+        const w = threePreview.clientWidth, h = threePreview.clientHeight;
+        renderer.setSize(w,h); camera.aspect = w/h; camera.updateProjectionMatrix();
+      };
+      new ResizeObserver(onResize).observe(threePreview);
+
+      const loop = ()=>{
+        three.raf = requestAnimationFrame(loop);
+        mesh.rotation.y += 0.01; mesh.rotation.x += 0.005;
+        renderer.render(scene, camera);
+      };
+      loop();
+    }
+
+    function enableThree(on){
+      if(on){ threePreview.hidden = false; initThree(); }
+      else {
+        threePreview.hidden = true;
+        if(three.raf) cancelAnimationFrame(three.raf);
+        if(three.renderer){ three.renderer.dispose(); three.renderer.domElement.remove(); }
+        three = {renderer:null, scene:null, camera:null, mesh:null, raf:0};
+      }
+    }
+
+    threeToggle.addEventListener('change', (e)=> enableThree(e.target.checked));
+
+    // Self-tests (open with ?test=1)
+    function runSelfTests(){
+      const origRandom = Math.random;
+      try{
+        console.log('%cRunning Mini Love self-tests…','color:#ff5a8a');
+        // Test 1: clicking ❤️ increments score
+        playing = true; score = 0; scoreEl.textContent = 0; 
+        Math.random = ()=> 0.99; // forces a normal heart
+        createHeart();
+        const h1 = game.querySelector('.heart');
+        console.assert(!!h1, 'A regular heart should spawn');
+        h1.click();
+        console.assert(score === 1, 'Clicking ❤️ should increment score to 1');
+
+        // Test 2: clicking 💔 reduces score but not below 0
+        Math.random = ()=> 0.0; // forces a broken heart
+        createHeart();
+        const b1 = game.querySelector('.broken-heart');
+        b1.click();
+        console.assert(score === 0, 'Clicking 💔 should decrement to 0 (not negative)');
+
+        // Test 3: tier mapping boundaries + salutation
+        const tierCases = [
+          {s:0, expect:'Needs Work 😅'},
+          {s:5, expect:'Needs Work 😅'},
+          {s:6, expect:'Getting There 💌'},
+          {s:10, expect:'Getting There 💌'},
+          {s:11, expect:'Sweetheart 💕'},
+          {s:15, expect:'Sweetheart 💕'},
+          {s:16, expect:'Hopeless Romantic 🌹'},
+          {s:29, expect:'Hopeless Romantic 🌹'},
+          {s:30, expect:'TRUE LOVE 💍💖'},
+        ];
+        for(const t of tierCases){
+          const {message} = getTier(t.s);
+          console.assert(message===t.expect, `Score ${t.s} → ${t.expect}`);
+        }
+        const salCases = [
+          {g:null, expect:''},
+          {g:'skip', expect:''},
+          {g:'male', expect:', sir'},
+          {g:'female', expect:', ma\u2019am'},
+          {g:'nb', expect:', friend'},
+        ];
+        for(const c of salCases){
+          console.assert(getSalutationSegment(c.g)===c.expect, `Gender ${c.g} → "${c.expect}"`);
+        }
+
+        console.log('%cAll self-tests passed','color:#35d07f');
+      }catch(e){ console.error('Self-tests failed:', e); }
+      finally{
+        Math.random = origRandom; playing=false; 
+        [...game.querySelectorAll('.heart,.broken-heart')].forEach(n=>n.remove());
+      }
+    }
+
+    if (new URLSearchParams(location.search).has('test')) runSelfTests();
+
+    // Boot: show onboarding
+    showOnboarding(0);
+    resizeFx();
+  </script>
 </body>
 </html>
+
