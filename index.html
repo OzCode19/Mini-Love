@@ -20,6 +20,7 @@
   .grid{
     display:grid; gap:14px; padding:16px; width:100%; flex:1;
     grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+    grid-auto-rows: 1fr;
   }
   .card{
     background:var(--card); border-radius:18px; padding:16px; text-decoration:none; color:inherit;
@@ -35,18 +36,16 @@
     background:linear-gradient(135deg,#6cf,#8ef); color:#052539; font-weight:800; border:none;
   }
   footer{padding:12px; text-align:center; font-size:12px; opacity:.7}
-  .tip{font-size:12px; opacity:.75; text-align:center; margin:6px 16px 0}
 </style>
 </head>
 <body>
   <header>
     <h1>Mini Game Hub 🎮</h1>
-    <p>Pick a game below. Built for iPhone Safari.</p>
-    <div class="tip">Tip: Add to Home Screen for a full‑screen feel.</div>
+    <p>Select a game to play.</p>
   </header>
 
   <main class="grid">
-    <!-- Mini Love -->
+    <!-- Game 1 -->
     <a class="card" href="games/mini-love.html">
       <div>
         <div class="tag">Arcade • 30s</div>
@@ -56,7 +55,55 @@
       <button class="play">Play →</button>
     </a>
 
-    <!-- (Optional) Add more games by duplicating the block above and changing href/title/desc -->
+    <!-- Game 2 -->
+    <a class="card" href="#">
+      <div>
+        <div class="tag">Coming Soon</div>
+        <div class="title">Game Title</div>
+        <div class="desc">Description of the upcoming game.</div>
+      </div>
+      <button class="play" disabled>Play →</button>
+    </a>
+
+    <!-- Game 3 -->
+    <a class="card" href="#">
+      <div>
+        <div class="tag">Coming Soon</div>
+        <div class="title">Game Title</div>
+        <div class="desc">Description of the upcoming game.</div>
+      </div>
+      <button class="play" disabled>Play →</button>
+    </a>
+
+    <!-- Game 4 -->
+    <a class="card" href="#">
+      <div>
+        <div class="tag">Coming Soon</div>
+        <div class="title">Game Title</div>
+        <div class="desc">Description of the upcoming game.</div>
+      </div>
+      <button class="play" disabled>Play →</button>
+    </a>
+
+    <!-- Game 5 -->
+    <a class="card" href="#">
+      <div>
+        <div class="tag">Coming Soon</div>
+        <div class="title">Game Title</div>
+        <div class="desc">Description of the upcoming game.</div>
+      </div>
+      <button class="play" disabled>Play →</button>
+    </a>
+
+    <!-- Game 6 -->
+    <a class="card" href="#">
+      <div>
+        <div class="tag">Coming Soon</div>
+        <div class="title">Game Title</div>
+        <div class="desc">Description of the upcoming game.</div>
+      </div>
+      <button class="play" disabled>Play →</button>
+    </a>
   </main>
 
   <footer>© <span id="y"></span> Mini Game Hub</footer>
